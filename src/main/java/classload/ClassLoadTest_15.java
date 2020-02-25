@@ -6,34 +6,37 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 
 /**
- * 实现自定义类加载器
+ * 实现自定义类卸载
  *
- * 定义类加载器：系统类加载器
- * 初始类加载器：系统类加载器 & ClassLoadTest_13
- * ------------------------------------
- * 没有打印出findClass的方法名和类加载器名称，所以此时没有用ClassLoadTest_13这个类加载器去加载类
- * 而是用他的父类，也就是系统类加载器，加载的ClassLoadTest_13。
+ * 为了明显的看到效果，需要在加上JVM 启动参数 ：-XX:+TraceClassUnloading
  *
- * 因为双亲委托机制，自定义加载器委托父类系统类加载器，去加载这个类，系统类加载器可以加载，则不需要 自定义类加载器
+ * 自定义类加载器在没有引用的时候可以被卸载的原理，我们赋空值，然后手动执行System.go(),可以看到控制台输出如下
+ * [Unloading class classload.ClassLoadTest_1 0x00000007c0061028]
  *
  * @Author bowen.cui
  * @Date 2020/2/20 18:28
  **/
-public class ClassLoadTest_13 extends ClassLoader {
+public class ClassLoadTest_15 extends ClassLoader {
 
     private String classLoaderName;
 
     private final String fileExtension = ".class";
 
-    protected ClassLoadTest_13(ClassLoader parent, String classLoaderName) {
+    private String path;
+
+    protected ClassLoadTest_15(ClassLoader parent, String classLoaderName) {
         // 指定父类加载器
         super(parent);
         this.classLoaderName = classLoaderName;
     }
 
-    protected ClassLoadTest_13(String classLoaderName) {
+    protected ClassLoadTest_15(String classLoaderName) {
         super();
         this.classLoaderName = classLoaderName;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
     }
 
     @Override
@@ -49,8 +52,8 @@ public class ClassLoadTest_13 extends ClassLoader {
         byte[] data = null;
         ByteArrayOutputStream baos = null;
         try {
-            this.classLoaderName = this.classLoaderName.replace(".", "\\");
-            inputStream = new FileInputStream(new File(className + this.fileExtension));
+            className = className.replace(".", "\\");
+            inputStream = new FileInputStream(new File(this.path + className + this.fileExtension));
             baos = new ByteArrayOutputStream();
             int ch = 0;
             while (-1 != (ch = inputStream.read())) {
@@ -77,15 +80,30 @@ public class ClassLoadTest_13 extends ClassLoader {
     }
 
     public static void test(ClassLoader classLoader) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
-        Class<?> clazz = classLoader.loadClass("classload.ClassLoadTest_1");
-        Object object = clazz.newInstance();
-        System.out.println(object);
-        System.out.println(object.getClass().getClassLoader());
+
     }
 
     public static void main(String[] args) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-        ClassLoadTest_13 classLoadTest_13 = new ClassLoadTest_13("cui");
-        test(classLoadTest_13);
+        ClassLoadTest_15 classLoadTest_14 = new ClassLoadTest_15("cui1");
+        classLoadTest_14.setPath("C:\\Users\\cuibowen3\\Desktop\\");
+        Class<?> clazz = classLoadTest_14.loadClass("classload.ClassLoadTest_1");
+        Object object = clazz.newInstance();
+        System.out.println(clazz.hashCode());
+        System.out.println(object);
+        System.out.println(object.getClass().getClassLoader());
 
+        System.out.println("---------------------------------------");
+        clazz = null;
+        object = null;
+        classLoadTest_14 = null;
+        System.gc();
+
+        classLoadTest_14 = new ClassLoadTest_15("cui1");
+        classLoadTest_14.setPath("C:\\Users\\cuibowen3\\Desktop\\");
+        clazz = classLoadTest_14.loadClass("classload.ClassLoadTest_1");
+        object = clazz.newInstance();
+        System.out.println(clazz.hashCode());
+        System.out.println(object);
+        System.out.println(object.getClass().getClassLoader());
     }
 }
